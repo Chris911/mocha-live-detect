@@ -4,7 +4,7 @@ import mocha from './utils/runner.js';
 
 describe('Mocha live detect', function() {
   describe('without live calls', function() {
-    mocha('./test/scenarios/no_live.js -R tap --require dist/index.js');
+    mocha('./test/scenarios/no_live.js -R tap --require dist/register.js');
 
     it('does not log any live request', function() {
       assert.include(res.out, 'Hostnames requested');
@@ -14,7 +14,7 @@ describe('Mocha live detect', function() {
   });
 
   describe('with local calls', function() {
-    mocha('./test/scenarios/localhost.js -R tap --require dist/index.js');
+    mocha('./test/scenarios/localhost.js -R tap --require dist/register.js');
 
     it('does not log any live request', function() {
       assert.include(res.out, 'Hostnames requested');
@@ -24,7 +24,7 @@ describe('Mocha live detect', function() {
   });
 
   describe('with live calls', function() {
-    mocha('./test/scenarios/live_requests.js -R tap --require dist/index.js');
+    mocha('./test/scenarios/live_requests.js -R tap --require dist/register.js');
 
     it('logs live call in test', function() {
       assert.include(res.out, 'Live requests');

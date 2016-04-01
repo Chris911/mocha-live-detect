@@ -1,60 +1,17 @@
-import chalk from 'chalk';
 import { EventEmitter } from 'events';
 import http from 'http';
 import { inherits } from 'util';
+import { getHostname, getHref, printHostnames, printTestRequest } from './utils';
 import Mocha from 'mocha';
 
 const hostnames = {};
-let testRequests = [];
-
-/**
- * Returns indent for pretty printing.
- * @param  {integer} size - indent size in spaces
- * @return {string} the indent string
- */
-function indent(size) {
-  let indentStr = '';
-  let _size = size;
-  while (_size > 0) {
-    indentStr += ' ';
-    _size--;
-  }
-  return indentStr;
-}
-
-/**
- * Prints full requests URL seen in test.
- */
-function printTestRequest() {
-  console.log(chalk.yellow(`${indent(6)} Live requests: `));
-
-  testRequests.forEach(request => {
-    console.log(chalk.yellow(`${indent(8)} * ${request}`));
-  });
-}
-
-/**
- * Print requested hostnames summary.
- */
-function printHostnames() {
-  console.log(chalk.yellow.bold(`${indent(2)} Hostnames requested: `));
-
-  if (Object.keys(hostnames).length === 0) {
-    console.log(chalk.yellow(`${indent(4)}none`));
-    return;
-  }
-
-  for (const key in hostnames) {
-    if (!hostnames[key]) return;
-    console.log(chalk.yellow(`${indent(4)}${key}: ${hostnames[key]}`));
-  }
-}
+const testRequests = [];
 
 /**
  * Patch mocha to display recording requests during individual tests and at
  * the end of the test suite.
  */
-function patchMocha() {
+export function patchMocha() {
   const _testRun = Mocha.Test.prototype.run;
 
   Mocha.Test.prototype.run = function (fn) {
@@ -63,7 +20,7 @@ function patchMocha() {
 
       if (testRequests.length) {
         printTestRequest(testRequests);
-        testRequests = [];
+        testRequests.length = 0;
       }
     }
 
@@ -83,40 +40,6 @@ function patchMocha() {
 }
 
 /**
- * Get the hostname from an HTTP options object.
- * Supports multiple types of options.
- * @param  {object} httpOptions
- * @return {string} the hostname or "Unknown" if not found.
- */
-function getHostname(httpOptions) {
-  if (httpOptions.uri && httpOptions.uri.hostname) {
-    return httpOptions.uri.hostname;
-  } else if (httpOptions.hostname) {
-    return httpOptions.hostname;
-  } else if (httpOptions.host) {
-    return httpOptions.host;
-  }
-  return 'Unknown';
-}
-
-/**
- * Get the href from an HTTP options objet.
- * Supports multiple types of options.
- * @param  {object} httpOptions
- * @return {string} the hostname or "Unknown" if not found.
- */
-function getHref(httpOptions) {
-  if (httpOptions.uri && httpOptions.uri.href) {
-    return httpOptions.uri.href;
-  } else if (httpOptions.hostname && httpOptions.path) {
-    return httpOptions.hostname + httpOptions.path;
-  } else if (httpOptions.host && httpOptions.path) {
-    return httpOptions.host + httpOptions.path;
-  }
-  return 'Unknown';
-}
-
-/**
  * Patch Node's HTTP client to record external HTTP calls.
  *   - All hostnames are stored in `hostname` with their count for the whole
  *     test suite.
@@ -124,7 +47,7 @@ function getHref(httpOptions) {
  *   	 recorded requests for individual tests.
  *   - Requests to localhost are ignored.
  */
-function patchHttpClient() {
+export function patchHttpClient() {
   const _ClientRequest = http.ClientRequest;
 
   function patchedHttpClient(options, done) {
@@ -146,11 +69,7 @@ function patchHttpClient() {
     _ClientRequest.call(this, options, done);
   }
 
-  if (http.ClientRequest) {
-    inherits(patchedHttpClient, _ClientRequest);
-  } else {
-    inherits(patchedHttpClient, EventEmitter);
-  }
+  inherits(patchedHttpClient, _ClientRequest || EventEmitter);
 
   http.ClientRequest = patchedHttpClient;
 
@@ -158,6 +77,3 @@ function patchHttpClient() {
     return new http.ClientRequest(options, done);
   };
 }
-
-patchHttpClient();
-patchMocha();
