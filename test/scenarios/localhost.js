@@ -9,6 +9,8 @@ describe('live requests', function() {
     server.listen(8585);
   });
 
+  after(server.close);
+
   it('passes', function() {
     assert(true);
   });
